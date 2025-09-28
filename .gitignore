@@ -1,0 +1,12 @@
+# Virtual Environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database file
+symptom_checker.db
+# Large data and model files
+*.csv
+*.pkl
