@@ -3,13 +3,11 @@ from flask_sqlalchemy import SQLAlchemy
 import random, smtplib, ssl
 from datetime import datetime
 import pandas as pd
-import joblib
-import numpy as np
 
 # ===============================================================
-# SWASTHSATHI - FINAL ML MODEL VERSION
+# SWASTHSATHI - STABLE DEPLOYMENT VERSION (Q&A LOGIC)
 # ===============================================================
-print("--- SWASTHSATHI (ML MODEL VERSION) IS RUNNING ---")
+print("--- SWASTHSATHI (STABLE Q&A VERSION) IS RUNNING ---")
 # ===============================================================
 
 app = Flask(__name__)
@@ -20,15 +18,14 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///symptom_checker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# ---------- Load the Trained Model and Columns ----------
+# ---------- Load Dataset for Q&A Logic ----------
 try:
-    model = joblib.load('disease_model.pkl')
-    model_columns = joblib.load('model_columns.pkl')
-    print("Model and columns loaded successfully.")
+    df = pd.read_csv('Disease_symptom_and_patient_profile_dataset.csv')
+    symptom_columns = ['Fever', 'Cough', 'Fatigue', 'Difficulty Breathing']
+    SYMPTOM_MAP = {symptom.lower(): symptom for symptom in symptom_columns}
 except FileNotFoundError:
-    print("FATAL ERROR: Model files not found. Please run train_model.py first.")
-    model = None
-    model_columns = []
+    print("FATAL ERROR: Disease_symptom_and_patient_profile_dataset.csv not found.")
+    df = pd.DataFrame()
 
 # ---------- Models ----------
 class User(db.Model):
@@ -45,9 +42,20 @@ class History(db.Model):
 # ---------- Email Config ----------
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465
-SENDER_EMAIL = "swasthsathi@gmail.com"
-SENDER_PASSWORD = "segwwdcqgydwsnaw"
+SENDER_EMAIL = "arjunpachori2005@gmail.com"
+SENDER_PASSWORD = "jvejdfjhjmsrshyt" # In production, use os.getenv("SENDER_PASSWORD")
 otp_store = {}
+
+# ---------- Helper Function ----------
+def get_next_symptom(possible_diseases, asked_symptoms):
+    if not possible_diseases:
+        return None
+    relevant_df = df[df['Disease'].isin(possible_diseases)]
+    for symptom in symptom_columns:
+        if symptom not in asked_symptoms:
+            if len(relevant_df[symptom].unique()) > 1:
+                return symptom
+    return None
 
 # ---------- Routes ----------
 @app.route('/')
@@ -97,35 +105,67 @@ def symptom_checker():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    email = session.get('email')
+    session.clear()
+    session['logged_in'] = True
+    session['email'] = email
+    session['user_symptoms'] = {}
+    session['asked_symptoms'] = []
+    session['possible_diseases'] = df['Disease'].unique().tolist()
+    symptoms_input = request.form.get('symptoms', '').lower().split(',')
+    for user_symptom in symptoms_input:
+        symptom_clean = user_symptom.strip()
+        if symptom_clean in SYMPTOM_MAP:
+            column_name = SYMPTOM_MAP[symptom_clean]
+            session['user_symptoms'][column_name] = 'Yes'
+            if column_name not in session['asked_symptoms']:
+                session['asked_symptoms'].append(column_name)
+    return redirect(url_for('ask_question'))
+
+@app.route('/question', methods=['GET', 'POST'])
+def ask_question():
     if not session.get('logged_in'): return redirect(url_for('login'))
+    session.setdefault('user_symptoms', {})
+    session.setdefault('asked_symptoms', [])
+    session.setdefault('possible_diseases', df['Disease'].unique().tolist())
+    if request.method == 'POST':
+        symptom = request.form['symptom']
+        answer = 'Yes' if request.form['answer'] == 'yes' else 'No'
+        session['user_symptoms'][symptom] = answer
+        if symptom not in session['asked_symptoms']:
+            session['asked_symptoms'].append(symptom)
     
-    if model is None or not model_columns.any():
-        return "Model not loaded. Please train the model first by running train_model.py"
-
-    # Get the list of symptoms from the user input
-    symptoms_input = request.form.get('symptoms', '').lower()
-    user_symptoms = [s.strip().replace(' ', '_') for s in symptoms_input.split(',')]
-
-    # Create an input vector for the model (an array of zeros)
-    input_vector = pd.DataFrame(columns=model_columns)
-    input_vector.loc[0] = 0
-
-    # Set the user's symptoms to 1 in the input vector
-    for symptom in user_symptoms:
-        if symptom in model_columns:
-            input_vector.loc[0, symptom] = 1
-            
-    # Make the prediction
-    prediction = model.predict(input_vector)[0]
+    possible_diseases = session.get('possible_diseases', [])
+    current_symptoms = session.get('user_symptoms', {})
     
-    # Save to history
-    timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    record = History(email=session.get('email'), symptoms=symptoms_input, disease=prediction, timestamp=timestamp_str)
-    db.session.add(record)
-    db.session.commit()
+    if possible_diseases:
+        diseases_to_remove = set()
+        for disease in possible_diseases:
+            disease_profile = df[df['Disease'] == disease].iloc[0]
+            for sym, value in current_symptoms.items():
+                if sym in disease_profile.index and disease_profile[sym] != value:
+                    diseases_to_remove.add(disease)
+                    break
+        session['possible_diseases'] = [d for d in possible_diseases if d not in diseases_to_remove]
     
-    return render_template('result.html', diseases=prediction, tips="Consult a doctor for an accurate diagnosis.", doctors="A General Physician is recommended.")
-
+    current_possibilities = session.get('possible_diseases', [])
+    next_symptom = get_next_symptom(current_possibilities, session.get('asked_symptoms', []))
+    
+    if not next_symptom or not current_possibilities or len(current_possibilities) == 1:
+        if current_possibilities:
+            final_disease = current_possibilities[0]
+        else:
+            final_disease = "Could not determine a match based on symptoms."
+        
+        symptoms_str = ", ".join([s for s, v in current_symptoms.items() if v == 'Yes'])
+        timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        record = History(email=session.get('email'), symptoms=symptoms_str, disease=final_disease, timestamp=timestamp_str)
+        db.session.add(record)
+        db.session.commit()
+        return render_template('result.html', diseases=final_disease, tips="Consult a doctor for an accurate diagnosis.", doctors="A General Physician is recommended.")
+    else:
+        session.modified = True
+        return render_template('question.html', symptom=next_symptom)
 
 @app.route('/history')
 def history():
@@ -137,15 +177,6 @@ def history():
 def logout():
     session.clear()
     return redirect(url_for('home'))
-
-@app.route('/get_symptoms')
-def get_symptoms():
-    if not model_columns.any():
-        return "Model columns not loaded."
-    
-    # Convert symptom names to a more user-friendly format (e.g., 'skin_rash' -> 'skin rash')
-    symptom_list = [col.replace('_', ' ') for col in model_columns]
-    return symptom_list
 
 if __name__ == "__main__":
     with app.app_context():
