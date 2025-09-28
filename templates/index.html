@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Symptom Checker - SwasthSathi</title>
+    <style>
+        :root { --dark-bg: #2C3E50; --light-container: #F4F1EA; --text-dark: #34495E; --accent: #E74C3C; --accent-hover: #C0392B;}
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: var(--dark-bg); font-family: Arial, sans-serif; }
+        .container { background-color: var(--light-container); color: var(--text-dark); padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; width: 500px; }
+        h1 { margin-bottom: 20px; }
+        
+        /* --- CHANGED: Styling the input field to be larger --- */
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input[type="submit"] { margin-top: 20px; padding: 12px 20px; border: none; border-radius: 5px; background-color: var(--accent); color: #fff; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; }
+        input[type="submit"]:hover { background-color: var(--accent-hover); }
+        .button-link { text-decoration: none; color: #fff; background-color: var(--text-dark); padding: 10px 15px; border-radius: 5px; display: inline-block; margin: 10px; transition: background-color 0.3s ease; }
+        .button-link:hover { background-color: #2C3E50; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Symptom Checker</h1>
+        <form action="/predict" method="POST">
+            <label for="symptoms">Please enter all your symptoms, separated by commas:</label><br>
+            
+            <input type="text" id="symptoms" name="symptoms" required placeholder="e.g., itching, skin rash, headache" list="symptom-suggestions"><br>
+            
+            <datalist id="symptom-suggestions"></datalist>
+
+            <input type="submit" value="Get Prediction">
+        </form>
+       <div style="margin-top: 30px;">
+           <a href="{{ url_for('history') }}" class="button-link">📜 View History</a>
+           <a href="{{ url_for('logout') }}" class="button-link">Logout</a>
+       </div>
+    </div>
+
+    <script>
+        fetch('/get_symptoms')
+            .then(response => response.json())
+            .then(symptoms => {
+                const dataList = document.getElementById('symptom-suggestions');
+                symptoms.forEach(symptom => {
+                    const option = document.createElement('option');
+                    option.value = symptom;
+                    dataList.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching symptoms:', error));
+    </script>
+
+</body>
+</html>

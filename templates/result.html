@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results - SwasthSathi</title>
+    <style>
+        :root { --dark-bg: #2C3E50; --light-container: #F4F1EA; --text-dark: #34495E; --accent: #E74C3C; --accent-hover: #C0392B;}
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; background-color: var(--dark-bg); font-family: Arial, sans-serif; box-sizing: border-box; }
+        .container { background-color: var(--light-container); color: var(--text-dark); padding: 30px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 600px; width: 90%; text-align: center; }
+        h1, h2 { margin-bottom: 15px; }
+        .disease-result { background-color: #fff; border: 1px solid #ddd; margin: 20px 0; padding: 20px; border-radius: 5px; font-size: 20px; font-weight: bold; color: var(--accent); }
+        .info-box { background-color: #fff; border: 1px solid #eee; margin: 10px 0; padding: 15px; border-radius: 5px; text-align: left; }
+        .back a { text-decoration: none; color: white; background-color: var(--accent); padding: 10px 15px; border-radius: 5px; display: inline-block; margin-top: 20px; transition: background-color 0.3s ease; }
+        .back a:hover { background-color: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Possible Disease:</h1>
+        <div class="disease-result">{{ diseases }}</div>
+        <div class="info-box">
+            <h2>Health Tips:</h2>
+            <p>{{ tips|safe }}</p>
+        </div>
+         <div class="info-box">
+            <h2>Suggested Doctors:</h2>
+            <p>{{ doctors|safe }}</p>
+        </div>
+        <div class="back">
+            <a href="{{ url_for('symptom_checker') }}">← Go Back</a>
+        </div>
+    </div>
+</body>
+</html>

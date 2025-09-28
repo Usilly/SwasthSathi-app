@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Question - SwasthSathi</title>
+    <style>
+        :root { --dark-bg: #2C3E50; --light-container: #F4F1EA; --text-dark: #34495E; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: var(--dark-bg); font-family: Arial, sans-serif; }
+        .container { background-color: var(--light-container); color: var(--text-dark); padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; width: 450px; }
+        h1 { margin-bottom: 25px; font-weight: 400;}
+        .button-group { margin-top: 20px; display: flex; justify-content: center; gap: 20px; }
+        .btn { text-decoration: none; color: white; padding: 12px 25px; border-radius: 5px; font-size: 16px; border: none; cursor: pointer; transition: background-color 0.3s ease; }
+        .btn-yes { background-color: #27ae60; }
+        .btn-yes:hover { background-color: #229954; }
+        .btn-no { background-color: #c0392b; }
+        .btn-no:hover { background-color: #a93226; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Do you have: <strong>{{ symptom }}</strong>?</h1>
+        <form action="/question" method="POST">
+            <input type="hidden" name="symptom" value="{{ symptom }}">
+            <div class="button-group">
+                <button type="submit" name="answer" value="yes" class="btn btn-yes">Yes</button>
+                <button type="submit" name="answer" value="no" class="btn btn-no">No</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your History - SwasthSathi</title>
+    <style>
+        :root { --dark-bg: #2C3E50; --light-container: #F4F1EA; --text-dark: #34495E; --accent: #E74C3C; --accent-hover: #C0392B;}
+        body { padding-top: 50px; padding-bottom: 50px; background-color: var(--dark-bg); font-family: Arial, sans-serif; min-height: 100vh; box-sizing: border-box; }
+        .container { background-color: var(--light-container); color: var(--text-dark); padding: 30px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 700px; width: 90%; margin: 0 auto; }
+        h1 { margin-bottom: 20px; text-align: center; }
+        .entry { background-color: #fff; border: 1px solid #eee; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .back { text-align: center; margin-top: 20px; }
+        .back a { text-decoration: none; color: white; background-color: var(--accent); padding: 8px 12px; border-radius: 5px; transition: background-color 0.3s ease; }
+        .back a:hover { background-color: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Past Queries</h1>
+        {% if records %}
+            {% for entry in records %}
+                <div class="entry">
+                    <p><strong>Time:</strong> {{ entry.timestamp }}</p>
+                    <p><strong>Symptoms:</strong> {{ entry.symptoms }}</p>
+                    <p><strong>Predicted Disease:</strong> {{ entry.disease }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No history found.</p>
+        {% endif %}
+        <div class="back">
+            <a href="{{ url_for('symptom_checker') }}">← Go Back</a>
+        </div>
+    </div>
+</body>
+</html>

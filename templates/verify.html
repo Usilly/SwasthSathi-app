@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify OTP - SwasthSathi</title>
+    <style>
+        :root { --dark-bg: #2C3E50; --light-container: #F4F1EA; --text-dark: #34495E; --accent: #E74C3C; --accent-hover: #C0392B;}
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: var(--dark-bg); font-family: Arial, sans-serif; }
+        .container { background-color: var(--light-container); color: var(--text-dark); padding: 40px; border-radius: 10px; text-align: center; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        h1 { margin-bottom: 20px; }
+        input[type="text"], input[type="submit"] { width: 100%; padding: 12px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
+        input[type="text"] { background-color: #FFFFFF; color: var(--text-dark); }
+        input[type="submit"] { background-color: var(--accent); color: #fff; cursor: pointer; border: none; transition: background-color 0.3s ease; }
+        input[type="submit"]:hover { background-color: var(--accent-hover); }
+        .error { color: #c0392b; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Enter OTP</h1>
+        <form method="POST" action="/verify">
+            <input type="text" name="otp" placeholder="Enter OTP" required><br>
+            <input type="submit" value="Verify">
+        </form>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>
