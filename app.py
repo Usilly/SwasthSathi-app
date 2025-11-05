@@ -3,23 +3,32 @@ from flask_sqlalchemy import SQLAlchemy
 import random, smtplib, ssl
 from datetime import datetime
 import pandas as pd
-import os # Necessary to read the password
+import os # Necessary for reading environment variables
+import numpy as np
+import joblib
 
 # ===============================================================
-# SWASTHSATHI - PURE SMTP GMAIL VERSION
+# SWASTHSATHI - FINAL DEPLOYMENT CODE (v10)
 # ===============================================================
-print("--- SWASTHSATHI (PURE SMTP VERSION) IS RUNNING ---")
+print("--- SWASTHSATHI (FINAL DEPLOYMENT CODE) IS RUNNING ---")
 # ===============================================================
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# ---------- Database Setup ----------
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///symptom_checker.db'
+# ---------- DATABASE CONFIGURATION (PostgreSQL Fix) ----------
+# 1. Get the DATABASE_URL from Render Environment
+DATABASE_URL = os.getenv('DATABASE_URL')
+# 2. Fix the syntax: Render gives 'postgresql://' but SQLA 2.0+ needs 'postgresql://'
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+# -------------------------------------------------------------
 
-# ---------- Load Dataset (Q&A Logic) ----------
+# ---------- Load Dataset (for Q&A Logic) ----------
 try:
     df = pd.read_csv('Disease_symptom_and_patient_profile_dataset.csv')
     symptom_columns = ['Fever', 'Cough', 'Fatigue', 'Difficulty Breathing']
@@ -42,8 +51,7 @@ class History(db.Model):
 
 # ---------- Email Config (SMTP) ----------
 SENDER_EMAIL = "swasthsathi@gmail.com"
-# Read the App Password securely from the environment variable (Render)
-SENDER_PASSWORD = os.getenv('SENDER_PASSWORD') 
+SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465
 otp_store = {}
@@ -76,19 +84,16 @@ def login():
             db.session.add(new_user)
             db.session.commit()
         
-        # --- PURE SMTP GMAIL LOGIC ---
+        # --- SMTP EMAIL LOGIC ---
         try:
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
-                server.login(SENDER_EMAIL, SENDER_PASSWORD)
+                server.login(SENDER_EMAIL, os.getenv('SENDER_PASSWORD'))
                 message = f"Subject: SwasthSathi OTP\n\nYour OTP is: {otp}"
                 server.sendmail(SENDER_EMAIL, email, message)
             return redirect(url_for('verify_otp'))
         except Exception as e:
-            # THIS WILL PRINT THE GMAIL ERROR (e.g., 535 5.7.8 Username and Password not accepted)
             return f"<h1>Error sending OTP (SMTP GMAIL): {e}</h1>"
-        # --- END PURE SMTP LOGIC ---
-
     return render_template('login.html')
 
 @app.route('/verify', methods=['GET', 'POST'])
@@ -185,6 +190,12 @@ def logout():
     return redirect(url_for('home'))
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
+    if os.getenv('DATABASE_URL'):
+        with app.app_context():
+            db.create_all()
+    else:
+        # Fallback for local testing (create sqlite database)
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///symptom_checker.db'
+        with app.app_context():
+            db.create_all()
     app.run(debug=True)
