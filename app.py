@@ -3,11 +3,12 @@ from flask_sqlalchemy import SQLAlchemy
 import random, smtplib, ssl
 from datetime import datetime
 import pandas as pd
+import os # Necessary to read the password
 
 # ===============================================================
-# SWASTHSATHI - STABLE DEPLOYMENT VERSION (Q&A LOGIC)
+# SWASTHSATHI - PURE SMTP GMAIL VERSION
 # ===============================================================
-print("--- SWASTHSATHI (STABLE Q&A VERSION) IS RUNNING ---")
+print("--- SWASTHSATHI (PURE SMTP VERSION) IS RUNNING ---")
 # ===============================================================
 
 app = Flask(__name__)
@@ -18,13 +19,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///symptom_checker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# ---------- Load Dataset for Q&A Logic ----------
+# ---------- Load Dataset (Q&A Logic) ----------
 try:
     df = pd.read_csv('Disease_symptom_and_patient_profile_dataset.csv')
     symptom_columns = ['Fever', 'Cough', 'Fatigue', 'Difficulty Breathing']
     SYMPTOM_MAP = {symptom.lower(): symptom for symptom in symptom_columns}
 except FileNotFoundError:
-    print("FATAL ERROR: Disease_symptom_and_patient_profile_dataset.csv not found.")
+    print("FATAL ERROR: Dataset not found.")
     df = pd.DataFrame()
 
 # ---------- Models ----------
@@ -39,17 +40,17 @@ class History(db.Model):
     disease = db.Column(db.String(200))
     timestamp = db.Column(db.String(100))
 
-# ---------- Email Config ----------
+# ---------- Email Config (SMTP) ----------
+SENDER_EMAIL = "swasthsathi@gmail.com"
+# Read the App Password securely from the environment variable (Render)
+SENDER_PASSWORD = os.getenv('SENDER_PASSWORD') 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465
-SENDER_EMAIL = "swasthsathi@gmail.com"
-SENDER_PASSWORD = "tqzcxjencxroglgh" # In production, use os.getenv("SENDER_PASSWORD")
 otp_store = {}
 
 # ---------- Helper Function ----------
 def get_next_symptom(possible_diseases, asked_symptoms):
-    if not possible_diseases:
-        return None
+    if not possible_diseases: return None
     relevant_df = df[df['Disease'].isin(possible_diseases)]
     for symptom in symptom_columns:
         if symptom not in asked_symptoms:
@@ -74,6 +75,8 @@ def login():
             new_user = User(email=email)
             db.session.add(new_user)
             db.session.commit()
+        
+        # --- PURE SMTP GMAIL LOGIC ---
         try:
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
@@ -82,7 +85,10 @@ def login():
                 server.sendmail(SENDER_EMAIL, email, message)
             return redirect(url_for('verify_otp'))
         except Exception as e:
-            return f"<h1>Error sending OTP: {e}</h1>"
+            # THIS WILL PRINT THE GMAIL ERROR (e.g., 535 5.7.8 Username and Password not accepted)
+            return f"<h1>Error sending OTP (SMTP GMAIL): {e}</h1>"
+        # --- END PURE SMTP LOGIC ---
+
     return render_template('login.html')
 
 @app.route('/verify', methods=['GET', 'POST'])
