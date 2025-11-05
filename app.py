@@ -42,8 +42,8 @@ class History(db.Model):
 # ---------- Email Config ----------
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465
-SENDER_EMAIL = "arjunpachori2005@gmail.com"
-SENDER_PASSWORD = "jvejdfjhjmsrshyt" # In production, use os.getenv("SENDER_PASSWORD")
+SENDER_EMAIL = "swasthsathi@gmail.com"
+SENDER_PASSWORD = "tqzcxjencxroglgh" # In production, use os.getenv("SENDER_PASSWORD")
 otp_store = {}
 
 # ---------- Helper Function ----------
